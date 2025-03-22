@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заметки</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #f4f4f4; }
+        h1 { color: #333; }
+        #noteInput { padding: 10px; width: 60%; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 15px; border: none; background: #28a745; color: white; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #218838; }
+        .note-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; margin: 10px auto; width: 60%; border-radius: 5px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
+        .note-buttons { display: flex; gap: 5px; }
+        .delete-btn { background: #b48d91; }
+        .delete-btn:hover { background: #b48d91; }
+        .edit-btn { background: #ffd65b; color: black; }
+        .edit-btn:hover { background: #ffd65b; }
+    </style>
+</head>
+<body>
+    <h1>Заметки</h1>
+    <input type="text" id="noteInput" placeholder="Введите заметку">
+    <button onclick="addNote()">Добавить</button>
+    
+    <div id="notes"></div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:5050"; // Адрес API
+
+        // Функция получения заметок
+        async function getNotes() {
+            const response = await fetch(`${API_URL}/notes`);
+            const data = await response.json();
+            const notesDiv = document.getElementById("notes");
+            notesDiv.innerHTML = "";
+            data.notes.forEach((note) => {
+                const noteItem = document.createElement("div");
+                noteItem.className = "note-item";
+                noteItem.innerHTML = `
+                    <span>${note.text}</span>
+                    <div class="note-buttons">
+                        <button class="edit-btn" onclick="updateNote(${note.id}, '${note.text}')">✏️</button>
+                        <button class="delete-btn" onclick="deleteNote(${note.id})">❌</button>
+                    </div>
+                `;
+                notesDiv.appendChild(noteItem);
+            });
+        }
+
+        // Функция добавления заметки
+        async function addNote() {
+            const noteText = document.getElementById("noteInput").value;
+            if (!noteText) return alert("Введите текст!");
+
+            const response = await fetch(`${API_URL}/add?note=${encodeURIComponent(noteText)}`, {
+                method: "POST"
+            });
+
+            if (response.ok) {
+                document.getElementById("noteInput").value = "";
+                await getNotes(); // Ждем обновления списка после добавления
+            } else {
+                alert("Ошибка при добавлении заметки");
+            }
+        }
+
+        // Функция удаления заметки
+        async function deleteNote(id) {
+            await fetch(`${API_URL}/delete/${id}`, { method: "DELETE" });
+            getNotes();
+        }
+
+        // Функция обновления заметки
+        async function updateNote(id, oldText) {
+            const newText = prompt("Введите новый текст:", oldText);
+            if (!newText) return;
+
+            await fetch(`${API_URL}/update/${id}?new_text=${encodeURIComponent(newText)}`, { method: "PUT" });
+            getNotes();
+        }
+
+        // Загрузка заметок при старте
+        getNotes();
+    </script>
+</body>
+</html>
